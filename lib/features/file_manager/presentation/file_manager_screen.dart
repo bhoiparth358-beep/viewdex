@@ -17,13 +17,29 @@ class FileManagerScreen extends ConsumerStatefulWidget {
   ConsumerState<FileManagerScreen> createState() => _FileManagerScreenState();
 }
 
-class _FileManagerScreenState extends ConsumerState<FileManagerScreen> {
+class _FileManagerScreenState extends ConsumerState<FileManagerScreen>
+    with WidgetsBindingObserver {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(fileManagerProvider.notifier).initialize();
     });
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState lifecycleState) {
+    if (lifecycleState == AppLifecycleState.resumed) {
+      // Automatically refresh when returning from system settings
+      ref.read(fileManagerProvider.notifier).initialize();
+    }
   }
 
   @override
@@ -155,14 +171,71 @@ class _FileManagerScreenState extends ConsumerState<FileManagerScreen> {
     }
 
     if (state.errorMessage != null && state.files.isEmpty) {
+      final isPermissionError =
+          state.errorMessage!.toLowerCase().contains('permission');
+
+      if (isPermissionError) {
+        return Center(
+          child: Padding(
+            padding: const EdgeInsets.all(32),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.folder_shared_outlined,
+                  size: 64,
+                  color: Theme.of(context).colorScheme.primary,
+                ),
+                const SizedBox(height: 20),
+                Text(
+                  'All Files Access Required',
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  'To view and manage files and folders, Viewdex requires "All files access" permission.\n\nTap below and enable "Allow access to manage all files".',
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
+                ),
+                const SizedBox(height: 28),
+                FilledButton.icon(
+                  onPressed: () async {
+                    await ref
+                        .read(permissionServiceProvider)
+                        .requestStoragePermission();
+                  },
+                  icon: const Icon(Icons.security),
+                  label: const Text('Grant All Files Access'),
+                ),
+                const SizedBox(height: 12),
+                OutlinedButton.icon(
+                  onPressed: () async {
+                    await ref
+                        .read(permissionServiceProvider)
+                        .openAppSettings();
+                  },
+                  icon: const Icon(Icons.settings),
+                  label: const Text('Open App Settings'),
+                ),
+              ],
+            ),
+          ),
+        );
+      }
+
       return Center(
         child: Padding(
           padding: const EdgeInsets.all(32),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(Icons.error_outline, size: 48,
-                  color: Theme.of(context).colorScheme.error),
+              Icon(Icons.error_outline,
+                  size: 48, color: Theme.of(context).colorScheme.error),
               const SizedBox(height: 16),
               Text(state.errorMessage!,
                   textAlign: TextAlign.center,
