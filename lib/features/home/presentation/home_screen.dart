@@ -63,25 +63,51 @@ class HomeScreen extends ConsumerWidget {
     return Card(
       elevation: 0,
       color: Theme.of(context).colorScheme.primaryContainer,
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(Icons.storage,
-                    color: Theme.of(context).colorScheme.onPrimaryContainer),
-                const SizedBox(width: 8),
-                Text(
-                  'Internal Storage',
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        color:
-                            Theme.of(context).colorScheme.onPrimaryContainer,
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: () => context.push('/storage-analysis'),
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Row(
+                    children: [
+                      Icon(Icons.storage,
+                          color: Theme.of(context).colorScheme.onPrimaryContainer),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Internal Storage',
+                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onPrimaryContainer,
+                            ),
                       ),
-                ),
-              ],
-            ),
+                    ],
+                  ),
+                  Row(
+                    children: [
+                      Text(
+                        'Details',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Theme.of(context).colorScheme.primary,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      Icon(
+                        Icons.chevron_right,
+                        size: 18,
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             const SizedBox(height: 16),
             storageInfoAsync.when(
               data: (info) {
@@ -137,8 +163,9 @@ class HomeScreen extends ConsumerWidget {
           ],
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 
   Widget _buildQuickAccess(BuildContext context, WidgetRef ref) {
     return GridView.count(

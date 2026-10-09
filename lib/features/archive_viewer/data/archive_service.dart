@@ -139,6 +139,48 @@ class ArchiveService {
     }
   }
 
+  Future<Result<String>> createZip(
+      List<String> sourcePaths, String destZipPath) async {
+    try {
+      final archive = Archive();
+
+      for (final srcPath in sourcePaths) {
+        final entity = FileSystemEntity.typeSync(srcPath);
+        final baseName = p.basename(srcPath);
+
+        if (entity == FileSystemEntityType.file) {
+          final file = File(srcPath);
+          final bytes = await file.readAsBytes();
+          archive.addFile(ArchiveFile(baseName, bytes.length, bytes));
+        } else if (entity == FileSystemEntityType.directory) {
+          final dir = Directory(srcPath);
+          final parentLength = dir.parent.path.length + 1;
+
+          await for (final item in dir.list(recursive: true, followLinks: false)) {
+            if (item is File) {
+              final relativePath = item.path.substring(parentLength);
+              final bytes = await item.readAsBytes();
+              archive.addFile(ArchiveFile(relativePath, bytes.length, bytes));
+            }
+          }
+        }
+      }
+
+      final zipData = ZipEncoder().encode(archive);
+      if (zipData == null) {
+        return const Failure(ArchiveError('Failed to encode ZIP archive.'));
+      }
+
+      final outFile = File(destZipPath);
+      await outFile.create(recursive: true);
+      await outFile.writeAsBytes(zipData);
+
+      return Success(destZipPath);
+    } catch (e) {
+      return Failure(ArchiveError('Failed to create ZIP archive: $e'));
+    }
+  }
+
   Future<Result<String>> extractToTemp(String archivePath, String entryName) async {
     try {
       final tempDir = await getTemporaryDirectory();

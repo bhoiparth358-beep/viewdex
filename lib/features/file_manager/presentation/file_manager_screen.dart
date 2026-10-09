@@ -9,6 +9,8 @@ import '../providers/file_manager_providers.dart';
 import '../domain/universal_file.dart';
 import '../domain/file_manager_state.dart';
 import 'file_open_handler.dart';
+import '../../archive_viewer/data/archive_service.dart';
+import '../../../core/errors/result.dart';
 
 class FileManagerScreen extends ConsumerStatefulWidget {
   const FileManagerScreen({super.key});
@@ -47,18 +49,32 @@ class _FileManagerScreenState extends ConsumerState<FileManagerScreen>
     final state = ref.watch(fileManagerProvider);
     final notifier = ref.read(fileManagerProvider.notifier);
 
-    return Scaffold(
-      appBar: state.isSelectionMode
-          ? _buildSelectionAppBar(state, notifier)
-          : _buildNormalAppBar(state, notifier),
-      body: _buildBody(state, notifier),
-      floatingActionButton:
-          state.isSelectionMode || state.isLoading || state.errorMessage != null
-              ? null
-              : FloatingActionButton(
-                  onPressed: () => _showNewFolderDialog(notifier),
-                  child: const Icon(Icons.create_new_folder),
-                ),
+    // Android System Back Button Intercept
+    final canPopBack = !state.isSelectionMode && state.pathHistory.isEmpty;
+
+    return PopScope(
+      canPop: canPopBack,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) return;
+        if (state.isSelectionMode) {
+          notifier.clearSelection();
+        } else if (state.pathHistory.isNotEmpty) {
+          notifier.goBack();
+        }
+      },
+      child: Scaffold(
+        appBar: state.isSelectionMode
+            ? _buildSelectionAppBar(state, notifier)
+            : _buildNormalAppBar(state, notifier),
+        body: _buildBody(state, notifier),
+        floatingActionButton:
+            state.isSelectionMode || state.isLoading || state.errorMessage != null
+                ? null
+                : FloatingActionButton(
+                    onPressed: () => _showNewFolderDialog(notifier),
+                    child: const Icon(Icons.create_new_folder),
+                  ),
+      ),
     );
   }
 
@@ -130,6 +146,13 @@ class _FileManagerScreenState extends ConsumerState<FileManagerScreen>
 
   PreferredSizeWidget _buildSelectionAppBar(
       FileManagerState state, FileManagerNotifier notifier) {
+    final singleFile = state.selectedFiles.length == 1
+        ? state.files.cast<UniversalFile?>().firstWhere(
+            (f) => f?.path == state.selectedFiles.first,
+            orElse: () => null,
+          )
+        : null;
+
     return AppBar(
       leading: IconButton(
         icon: const Icon(Icons.close),
@@ -138,11 +161,31 @@ class _FileManagerScreenState extends ConsumerState<FileManagerScreen>
       title: Text('${state.selectedFiles.length} selected'),
       actions: [
         IconButton(
-          icon: const Icon(Icons.select_all),
-          onPressed: () => notifier.selectAll(),
+          icon: const Icon(Icons.folder_zip),
+          tooltip: 'Compress to ZIP',
+          onPressed: state.selectedFiles.isEmpty
+              ? null
+              : () => _showCompressDialog(
+                    state.selectedFiles.toList(),
+                    state.currentPath,
+                    notifier,
+                  ),
         ),
+        if (singleFile != null) ...[
+          IconButton(
+            icon: const Icon(Icons.edit),
+            tooltip: 'Rename',
+            onPressed: () => _showRenameDialog(singleFile, notifier),
+          ),
+          IconButton(
+            icon: const Icon(Icons.info_outline),
+            tooltip: 'Properties',
+            onPressed: () => _showPropertiesDialog(singleFile),
+          ),
+        ],
         IconButton(
           icon: const Icon(Icons.share),
+          tooltip: 'Share',
           onPressed: state.selectedFiles.isEmpty
               ? null
               : () {
@@ -157,9 +200,15 @@ class _FileManagerScreenState extends ConsumerState<FileManagerScreen>
         ),
         IconButton(
           icon: const Icon(Icons.delete),
+          tooltip: 'Delete',
           onPressed: state.selectedFiles.isEmpty
               ? null
               : () => _showDeleteConfirmDialog(notifier),
+        ),
+        IconButton(
+          icon: const Icon(Icons.select_all),
+          tooltip: 'Select All',
+          onPressed: () => notifier.selectAll(),
         ),
       ],
     );
@@ -257,13 +306,10 @@ class _FileManagerScreenState extends ConsumerState<FileManagerScreen>
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.folder_open, size: 64,
-                color: Theme.of(context).colorScheme.outline),
+            Icon(Icons.folder_open, size: 64, color: Colors.grey.shade400),
             const SizedBox(height: 16),
-            Text('This folder is empty',
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      color: Theme.of(context).colorScheme.outline,
-                    )),
+            Text('Folder is empty',
+                style: Theme.of(context).textTheme.bodyLarge),
           ],
         ),
       );
@@ -300,13 +346,17 @@ class _FileManagerScreenState extends ConsumerState<FileManagerScreen>
                 )
               : PopupMenuButton<String>(
                   onSelected: (val) =>
-                      _handleFileAction(val, file, notifier),
-                  itemBuilder: (context) => const [
-                    PopupMenuItem(value: 'open', child: Text('Open')),
-                    PopupMenuItem(value: 'share', child: Text('Share')),
-                    PopupMenuItem(value: 'rename', child: Text('Rename')),
-                    PopupMenuItem(value: 'properties', child: Text('Properties')),
-                    PopupMenuItem(value: 'delete', child: Text('Delete')),
+                      _handleFileAction(val, file, state.currentPath, notifier),
+                  itemBuilder: (context) => [
+                    const PopupMenuItem(value: 'open', child: Text('Open')),
+                    const PopupMenuItem(
+                        value: 'compress', child: Text('Compress to ZIP')),
+                    const PopupMenuItem(value: 'rename', child: Text('Rename')),
+                    const PopupMenuItem(
+                        value: 'properties', child: Text('Properties')),
+                    if (!file.isDirectory)
+                      const PopupMenuItem(value: 'share', child: Text('Share')),
+                    const PopupMenuItem(value: 'delete', child: Text('Delete')),
                   ],
                 ),
           onTap: () => _onFileTap(file, state, notifier),
@@ -390,6 +440,17 @@ class _FileManagerScreenState extends ConsumerState<FileManagerScreen>
     );
   }
 
+  void _onFileTap(
+      UniversalFile file, FileManagerState state, FileManagerNotifier notifier) {
+    if (state.isSelectionMode) {
+      notifier.toggleSelection(file.path);
+    } else if (file.isDirectory) {
+      notifier.navigateTo(file.path);
+    } else {
+      FileOpenHandler.openFile(context, file);
+    }
+  }
+
   String _getSubtitle(UniversalFile file) {
     final parts = <String>[];
     if (file.isDirectory) {
@@ -401,17 +462,6 @@ class _FileManagerScreenState extends ConsumerState<FileManagerScreen>
       parts.add(DateFormat('MMM d, yyyy').format(file.modifiedDate!));
     }
     return parts.join(' • ');
-  }
-
-  void _onFileTap(
-      UniversalFile file, FileManagerState state, FileManagerNotifier notifier) {
-    if (state.isSelectionMode) {
-      notifier.toggleSelection(file.path);
-    } else if (file.isDirectory) {
-      notifier.navigateTo(file.path);
-    } else {
-      FileOpenHandler.openFile(context, file);
-    }
   }
 
   Widget _getFileIcon(FileType type, bool isSelected, {double size = 24}) {
@@ -442,8 +492,8 @@ class _FileManagerScreenState extends ConsumerState<FileManagerScreen>
     return Icon(iconData, color: color, size: size);
   }
 
-  void _handleFileAction(
-      String action, UniversalFile file, FileManagerNotifier notifier) {
+  void _handleFileAction(String action, UniversalFile file, String currentPath,
+      FileManagerNotifier notifier) {
     switch (action) {
       case 'open':
         if (file.isDirectory) {
@@ -451,6 +501,8 @@ class _FileManagerScreenState extends ConsumerState<FileManagerScreen>
         } else {
           FileOpenHandler.openFile(context, file);
         }
+      case 'compress':
+        _showCompressDialog([file.path], currentPath, notifier);
       case 'rename':
         _showRenameDialog(file, notifier);
       case 'share':
@@ -464,6 +516,70 @@ class _FileManagerScreenState extends ConsumerState<FileManagerScreen>
         notifier.toggleSelection(file.path);
         _showDeleteConfirmDialog(notifier);
     }
+  }
+
+  void _showCompressDialog(List<String> paths, String currentPath,
+      FileManagerNotifier notifier) {
+    if (paths.isEmpty) return;
+    final defaultName = paths.length == 1
+        ? '${p.basenameWithoutExtension(paths.first)}.zip'
+        : 'archive.zip';
+    final controller = TextEditingController(text: defaultName);
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Compress to ZIP'),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          decoration: const InputDecoration(
+            labelText: 'Archive name',
+            hintText: 'e.g. my_archive.zip',
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          FilledButton.icon(
+            onPressed: () async {
+              var name = controller.text.trim();
+              if (name.isEmpty) return;
+              if (!name.toLowerCase().endsWith('.zip')) {
+                name = '$name.zip';
+              }
+              Navigator.pop(ctx);
+
+              final destPath = p.join(currentPath, name);
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Compressing to ZIP... Please wait.')),
+              );
+
+              final result = await ArchiveService().createZip(paths, destPath);
+              if (!mounted) return;
+
+              switch (result) {
+                case Success():
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Created $name successfully!')),
+                  );
+                  notifier.clearSelection();
+                  notifier.refresh();
+                case Failure(:final error):
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                        content: Text('Compression failed: ${error.message}')),
+                  );
+              }
+            },
+            icon: const Icon(Icons.folder_zip),
+            label: const Text('Compress'),
+          ),
+        ],
+      ),
+    );
   }
 
   void _showNewFolderDialog(FileManagerNotifier notifier) {

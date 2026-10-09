@@ -21,20 +21,35 @@ class FileOpenHandler {
       prefs.setStringList('recent_files', updated);
     }).catchError((_) {});
 
+    final ext = file.extension?.toLowerCase() ?? '';
+
+    // In-app DOCX Word Document Viewer
+    if (ext == 'docx') {
+      context.push('/viewer/docx', extra: file.path);
+      return;
+    }
+
     if (file.fileType == FileType.document ||
         file.fileType == FileType.spreadsheet ||
         file.fileType == FileType.presentation) {
       OpenFilex.open(file.path).then((result) {
         if (result.type != ResultType.done && context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Could not open file: ${result.message}')),
+            SnackBar(
+              content: Text(
+                'Could not open $ext file: ${result.message}. Try installing an Office app.',
+              ),
+            ),
           );
         }
       });
       return;
     }
 
-    final route = AppRouter.viewerRouteForFileType(file.fileType);
+    final route = AppRouter.viewerRouteForFileType(
+      file.fileType,
+      extension: file.extension,
+    );
 
     if (file.fileType == FileType.video) {
       context.push(route, extra: {'path': file.path, 'isAudio': false});

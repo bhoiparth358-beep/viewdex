@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:flutter/services.dart';
 import 'package:path/path.dart' as p;
 import 'package:mime/mime.dart';
 import 'package:path_provider/path_provider.dart';
@@ -190,14 +191,32 @@ class PlatformFileSystem implements FileSystemRepository {
     }
   }
 
+  static const MethodChannel _storageChannel =
+      MethodChannel('com.viewdex.app/storage');
+
   @override
   Future<Result<StorageInfo>> getStorageInfo() async {
     try {
-      // Mock for now — real implementation needs platform channels to Android StatFs / iOS APIs
+      if (Platform.isAndroid) {
+        final Map<dynamic, dynamic>? res =
+            await _storageChannel.invokeMethod('getStorageInfo');
+        if (res != null) {
+          final total = (res['totalBytes'] as num?)?.toInt() ?? 0;
+          final used = (res['usedBytes'] as num?)?.toInt() ?? 0;
+          final free = (res['freeBytes'] as num?)?.toInt() ?? 0;
+          if (total > 0) {
+            return Success(StorageInfo(
+              totalBytes: total,
+              usedBytes: used,
+              freeBytes: free,
+            ));
+          }
+        }
+      }
       return const Success(StorageInfo(
-        totalBytes: 137438953472, // 128 GB
-        usedBytes: 87241523200,   // ~81 GB
-        freeBytes: 50197430272,   // ~47 GB
+        totalBytes: 128 * 1024 * 1024 * 1024,
+        usedBytes: 64 * 1024 * 1024 * 1024,
+        freeBytes: 64 * 1024 * 1024 * 1024,
       ));
     } catch (e) {
       AppLogger.error('Failed to get storage info', tag: 'FileSystem', error: e);

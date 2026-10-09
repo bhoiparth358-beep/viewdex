@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../features/file_manager/domain/universal_file.dart';
 import '../shared/widgets/bottom_nav_shell.dart';
 import '../features/home/presentation/home_screen.dart';
+import '../features/home/presentation/storage_analysis_screen.dart';
 import '../features/file_manager/presentation/file_manager_screen.dart';
 import '../features/search/presentation/search_screen.dart';
 import '../features/library/presentation/library_screen.dart';
@@ -13,6 +14,7 @@ import '../features/video_player/presentation/video_player_screen.dart';
 import '../features/text_viewer/presentation/text_viewer_screen.dart';
 import '../features/pdf_viewer/presentation/pdf_viewer_screen.dart';
 import '../features/archive_viewer/presentation/archive_viewer_screen.dart';
+import '../features/office_viewer/presentation/docx_viewer_screen.dart';
 
 final _rootNavigatorKey = GlobalKey<NavigatorState>();
 final _shellNavigatorKey = GlobalKey<NavigatorState>();
@@ -47,6 +49,10 @@ class AppRouter {
       GoRoute(
         path: '/settings',
         builder: (context, state) => const SettingsScreen(),
+      ),
+      GoRoute(
+        path: '/storage-analysis',
+        builder: (context, state) => const StorageAnalysisScreen(),
       ),
       // Viewer routes (full-screen, no bottom nav)
       GoRoute(
@@ -86,10 +92,18 @@ class AppRouter {
         builder: (context, state) =>
             ArchiveViewerScreen(path: state.extra as String),
       ),
+      GoRoute(
+        path: '/viewer/docx',
+        builder: (context, state) =>
+            DocxViewerScreen(filePath: state.extra as String),
+      ),
     ],
   );
 
-  static String viewerRouteForFileType(FileType type) {
+  static String viewerRouteForFileType(FileType type, {String? extension}) {
+    if (extension?.toLowerCase() == 'docx') {
+      return '/viewer/docx';
+    }
     return switch (type) {
       FileType.image => '/viewer/image',
       FileType.video => '/viewer/video',
