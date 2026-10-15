@@ -29,9 +29,20 @@ class FileOpenHandler {
       return;
     }
 
-    if (file.fileType == FileType.document ||
-        file.fileType == FileType.spreadsheet ||
-        file.fileType == FileType.presentation) {
+    // In-app XLSX Excel Spreadsheet Viewer
+    if (ext == 'xlsx' || ext == 'xls' || file.fileType == FileType.spreadsheet) {
+      context.push('/viewer/xlsx', extra: file.path);
+      return;
+    }
+
+    // In-app PPTX PowerPoint Presentation Viewer
+    if (ext == 'pptx' || ext == 'ppt' || file.fileType == FileType.presentation) {
+      context.push('/viewer/pptx', extra: file.path);
+      return;
+    }
+
+    // Fallback for other generic documents (ODT, RTF, etc.)
+    if (file.fileType == FileType.document) {
       OpenFilex.open(file.path).then((result) {
         if (result.type != ResultType.done && context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(

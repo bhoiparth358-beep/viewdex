@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:viewdex/app/router.dart';
 import 'package:viewdex/core/file_detection/file_type_detector.dart';
 import 'package:viewdex/features/file_manager/domain/universal_file.dart';
 import 'package:viewdex/core/errors/result.dart';
@@ -68,6 +69,31 @@ void main() {
         (error) => 'got error: ${error.message}',
       );
       expect(folded, 'got error: File missing');
+    });
+  });
+
+  group('AppRouter viewer route tests', () {
+    test('routes office documents to dedicated in-app viewers', () {
+      expect(
+        AppRouter.viewerRouteForFileType(FileType.document, extension: 'docx'),
+        '/viewer/docx',
+      );
+      expect(
+        AppRouter.viewerRouteForFileType(FileType.spreadsheet, extension: 'xlsx'),
+        '/viewer/xlsx',
+      );
+      expect(
+        AppRouter.viewerRouteForFileType(FileType.spreadsheet, extension: 'xls'),
+        '/viewer/xlsx',
+      );
+      expect(
+        AppRouter.viewerRouteForFileType(FileType.presentation, extension: 'pptx'),
+        '/viewer/pptx',
+      );
+      expect(
+        AppRouter.viewerRouteForFileType(FileType.presentation, extension: 'ppt'),
+        '/viewer/pptx',
+      );
     });
   });
 }

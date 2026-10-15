@@ -98,7 +98,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             groupValue: themeMode,
             onChanged: (mode) {
               if (mode != null) {
-                ref.read(themeModeProvider.notifier).state = mode;
+                ref.read(themeModeProvider.notifier).setThemeMode(mode);
               }
             },
           ),
@@ -108,7 +108,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             groupValue: themeMode,
             onChanged: (mode) {
               if (mode != null) {
-                ref.read(themeModeProvider.notifier).state = mode;
+                ref.read(themeModeProvider.notifier).setThemeMode(mode);
               }
             },
           ),
@@ -118,7 +118,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             groupValue: themeMode,
             onChanged: (mode) {
               if (mode != null) {
-                ref.read(themeModeProvider.notifier).state = mode;
+                ref.read(themeModeProvider.notifier).setThemeMode(mode);
               }
             },
           ),

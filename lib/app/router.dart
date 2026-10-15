@@ -15,6 +15,8 @@ import '../features/text_viewer/presentation/text_viewer_screen.dart';
 import '../features/pdf_viewer/presentation/pdf_viewer_screen.dart';
 import '../features/archive_viewer/presentation/archive_viewer_screen.dart';
 import '../features/office_viewer/presentation/docx_viewer_screen.dart';
+import '../features/office_viewer/presentation/xlsx_viewer_screen.dart';
+import '../features/office_viewer/presentation/pptx_viewer_screen.dart';
 
 final _rootNavigatorKey = GlobalKey<NavigatorState>();
 final _shellNavigatorKey = GlobalKey<NavigatorState>();
@@ -28,82 +30,31 @@ class AppRouter {
         navigatorKey: _shellNavigatorKey,
         builder: (context, state, child) => BottomNavShell(child: child),
         routes: [
-          GoRoute(
-            path: '/',
-            builder: (context, state) => const HomeScreen(),
-          ),
-          GoRoute(
-            path: '/files',
-            builder: (context, state) => const FileManagerScreen(),
-          ),
-          GoRoute(
-            path: '/search',
-            builder: (context, state) => const SearchScreen(),
-          ),
-          GoRoute(
-            path: '/library',
-            builder: (context, state) => const LibraryScreen(),
-          ),
+          GoRoute(path: '/', builder: (context, state) => const HomeScreen()),
+          GoRoute(path: '/files', builder: (context, state) => const FileManagerScreen()),
+          GoRoute(path: '/search', builder: (context, state) => const SearchScreen()),
+          GoRoute(path: '/library', builder: (context, state) => const LibraryScreen()),
         ],
       ),
-      GoRoute(
-        path: '/settings',
-        builder: (context, state) => const SettingsScreen(),
-      ),
-      GoRoute(
-        path: '/storage-analysis',
-        builder: (context, state) => const StorageAnalysisScreen(),
-      ),
-      // Viewer routes (full-screen, no bottom nav)
-      GoRoute(
-        path: '/viewer/image',
-        builder: (context, state) =>
-            ImageViewerScreen(filePath: state.extra as String),
-      ),
-      GoRoute(
-        path: '/viewer/video',
-        builder: (context, state) {
-          final extra = state.extra as Map<String, dynamic>;
-          return VideoPlayerScreen(
-            filePath: extra['path'] as String,
-            isAudio: extra['isAudio'] as bool? ?? false,
-          );
-        },
-      ),
-      GoRoute(
-        path: '/viewer/audio',
-        builder: (context, state) => VideoPlayerScreen(
-          filePath: state.extra as String,
-          isAudio: true,
-        ),
-      ),
-      GoRoute(
-        path: '/viewer/text',
-        builder: (context, state) =>
-            TextViewerScreen(filePath: state.extra as String),
-      ),
-      GoRoute(
-        path: '/viewer/pdf',
-        builder: (context, state) =>
-            PdfViewerScreen(path: state.extra as String),
-      ),
-      GoRoute(
-        path: '/viewer/archive',
-        builder: (context, state) =>
-            ArchiveViewerScreen(path: state.extra as String),
-      ),
-      GoRoute(
-        path: '/viewer/docx',
-        builder: (context, state) =>
-            DocxViewerScreen(filePath: state.extra as String),
-      ),
+      GoRoute(path: '/settings', builder: (context, state) => const SettingsScreen()),
+      GoRoute(path: '/storage-analysis', builder: (context, state) => const StorageAnalysisScreen()),
+      GoRoute(path: '/viewer/image', builder: (context, state) => ImageViewerScreen(filePath: state.extra as String)),
+      GoRoute(path: '/viewer/video', builder: (context, state) { final extra = state.extra as Map<String, dynamic>; return VideoPlayerScreen(filePath: extra['path'] as String, isAudio: extra['isAudio'] as bool? ?? false); }),
+      GoRoute(path: '/viewer/audio', builder: (context, state) => VideoPlayerScreen(filePath: state.extra as String, isAudio: true)),
+      GoRoute(path: '/viewer/text', builder: (context, state) => TextViewerScreen(filePath: state.extra as String)),
+      GoRoute(path: '/viewer/pdf', builder: (context, state) => PdfViewerScreen(path: state.extra as String)),
+      GoRoute(path: '/viewer/archive', builder: (context, state) => ArchiveViewerScreen(path: state.extra as String)),
+      GoRoute(path: '/viewer/docx', builder: (context, state) => DocxViewerScreen(filePath: state.extra as String)),
+      GoRoute(path: '/viewer/xlsx', builder: (context, state) => XlsxViewerScreen(filePath: state.extra as String)),
+      GoRoute(path: '/viewer/pptx', builder: (context, state) => PptxViewerScreen(filePath: state.extra as String)),
     ],
   );
 
   static String viewerRouteForFileType(FileType type, {String? extension}) {
-    if (extension?.toLowerCase() == 'docx') {
-      return '/viewer/docx';
-    }
+    final ext = extension?.toLowerCase();
+    if (ext == 'docx') return '/viewer/docx';
+    if (ext == 'xlsx' || ext == 'xls') return '/viewer/xlsx';
+    if (ext == 'pptx' || ext == 'ppt') return '/viewer/pptx';
     return switch (type) {
       FileType.image => '/viewer/image',
       FileType.video => '/viewer/video',
@@ -111,6 +62,8 @@ class AppRouter {
       FileType.text => '/viewer/text',
       FileType.pdf => '/viewer/pdf',
       FileType.archive => '/viewer/archive',
+      FileType.spreadsheet => '/viewer/xlsx',
+      FileType.presentation => '/viewer/pptx',
       _ => '/viewer/text',
     };
   }
