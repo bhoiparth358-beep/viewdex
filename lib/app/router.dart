@@ -5,6 +5,7 @@ import '../features/file_manager/domain/universal_file.dart';
 import '../shared/widgets/bottom_nav_shell.dart';
 import '../features/home/presentation/home_screen.dart';
 import '../features/home/presentation/storage_analysis_screen.dart';
+import '../features/home/presentation/category_files_screen.dart';
 import '../features/file_manager/presentation/file_manager_screen.dart';
 import '../features/search/presentation/search_screen.dart';
 import '../features/library/presentation/library_screen.dart';
@@ -22,6 +23,8 @@ final _rootNavigatorKey = GlobalKey<NavigatorState>();
 final _shellNavigatorKey = GlobalKey<NavigatorState>();
 
 class AppRouter {
+  static GlobalKey<NavigatorState> get rootNavigatorKey => _rootNavigatorKey;
+
   static final GoRouter router = GoRouter(
     navigatorKey: _rootNavigatorKey,
     initialLocation: '/',
@@ -32,12 +35,22 @@ class AppRouter {
         routes: [
           GoRoute(path: '/', builder: (context, state) => const HomeScreen()),
           GoRoute(path: '/files', builder: (context, state) => const FileManagerScreen()),
-          GoRoute(path: '/search', builder: (context, state) => const SearchScreen()),
           GoRoute(path: '/library', builder: (context, state) => const LibraryScreen()),
         ],
       ),
+      GoRoute(path: '/search', builder: (context, state) => const SearchScreen()),
       GoRoute(path: '/settings', builder: (context, state) => const SettingsScreen()),
       GoRoute(path: '/storage-analysis', builder: (context, state) => const StorageAnalysisScreen()),
+      GoRoute(
+        path: '/category',
+        builder: (context, state) {
+          final extra = state.extra as Map<String, dynamic>;
+          return CategoryFilesScreen(
+            fileType: extra['fileType'] as FileType,
+            label: extra['label'] as String,
+          );
+        },
+      ),
       GoRoute(path: '/viewer/image', builder: (context, state) => ImageViewerScreen(filePath: state.extra as String)),
       GoRoute(path: '/viewer/video', builder: (context, state) { final extra = state.extra as Map<String, dynamic>; return VideoPlayerScreen(filePath: extra['path'] as String, isAudio: extra['isAudio'] as bool? ?? false); }),
       GoRoute(path: '/viewer/audio', builder: (context, state) => VideoPlayerScreen(filePath: state.extra as String, isAudio: true)),

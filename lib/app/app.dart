@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../features/file_manager/presentation/file_open_handler.dart';
 import 'router.dart';
 import 'theme/app_theme.dart';
 
@@ -67,11 +69,53 @@ final themeModeProvider =
   return ThemeModeNotifier();
 });
 
-class ViewdexApp extends ConsumerWidget {
+class ViewdexApp extends ConsumerStatefulWidget {
   const ViewdexApp({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<ViewdexApp> createState() => _ViewdexAppState();
+}
+
+class _ViewdexAppState extends ConsumerState<ViewdexApp> {
+  static const _fileChannel = MethodChannel('com.viewdex.app/file_open');
+
+  @override
+  void initState() {
+    super.initState();
+    _fileChannel.setMethodCallHandler(_handleNativeFileMethod);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _checkInitialFile();
+    });
+  }
+
+  Future<void> _checkInitialFile() async {
+    try {
+      final initialPath =
+          await _fileChannel.invokeMethod<String>('getInitialFile');
+      if (initialPath != null && initialPath.isNotEmpty) {
+        _openExternalFile(initialPath);
+      }
+    } catch (_) {}
+  }
+
+  Future<dynamic> _handleNativeFileMethod(MethodCall call) async {
+    if (call.method == 'onFileOpened') {
+      final path = call.arguments as String?;
+      if (path != null && path.isNotEmpty) {
+        _openExternalFile(path);
+      }
+    }
+  }
+
+  void _openExternalFile(String path) {
+    final context = AppRouter.rootNavigatorKey.currentContext;
+    if (context != null) {
+      FileOpenHandler.openFilePath(context, path);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final themeMode = ref.watch(themeModeProvider);
 
     return MaterialApp.router(

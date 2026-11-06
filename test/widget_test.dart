@@ -14,7 +14,7 @@ void main() {
     // Verify bottom navigation tabs exist
     expect(find.text('Home'), findsWidgets);
     expect(find.text('Files'), findsWidgets);
-    expect(find.text('Search'), findsWidgets);
     expect(find.text('Library'), findsWidgets);
+    expect(find.byTooltip('Search files'), findsOneWidget);
   });
 }

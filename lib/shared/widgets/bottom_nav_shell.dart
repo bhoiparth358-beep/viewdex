@@ -11,8 +11,7 @@ class BottomNavShell extends ConsumerWidget {
   int _calculateSelectedIndex(BuildContext context) {
     final String location = GoRouterState.of(context).uri.path;
     if (location.startsWith('/files')) return 1;
-    if (location.startsWith('/search')) return 2;
-    if (location.startsWith('/library')) return 3;
+    if (location.startsWith('/library')) return 2;
     return 0; // Default to home
   }
 
@@ -25,9 +24,6 @@ class BottomNavShell extends ConsumerWidget {
         context.go('/files');
         break;
       case 2:
-        context.go('/search');
-        break;
-      case 3:
         context.go('/library');
         break;
     }
@@ -38,23 +34,26 @@ class BottomNavShell extends ConsumerWidget {
     final currentIndex = _calculateSelectedIndex(context);
     final fileState = ref.watch(fileManagerProvider);
 
-    final bool canFileManagerHandleBack = currentIndex == 1 &&
-        (fileState.pathHistory.isNotEmpty || fileState.isSelectionMode);
-
     return PopScope(
       canPop: currentIndex == 0,
       onPopInvokedWithResult: (didPop, result) {
         if (didPop) return;
 
-        // When on Files tab and the file manager can handle back
-        // (inside a subfolder or in selection mode), let the inner
-        // FileManagerScreen PopScope handle it.
-        if (canFileManagerHandleBack) {
-          return;
+        // When on Files tab and inside a subfolder or in selection mode,
+        // explicitly handle back navigation via the file manager notifier.
+        if (currentIndex == 1) {
+          if (fileState.isSelectionMode) {
+            ref.read(fileManagerProvider.notifier).clearSelection();
+            return;
+          }
+          if (fileState.pathHistory.isNotEmpty) {
+            ref.read(fileManagerProvider.notifier).goBack();
+            return;
+          }
         }
 
+        // For any non-Home tab at root level, navigate to Home
         if (currentIndex != 0) {
-          // If on Files (at root), Search, or Library tab, go back to Home first
           context.go('/');
         }
       },
@@ -73,11 +72,6 @@ class BottomNavShell extends ConsumerWidget {
               icon: Icon(Icons.folder_outlined),
               selectedIcon: Icon(Icons.folder),
               label: 'Files',
-            ),
-            NavigationDestination(
-              icon: Icon(Icons.search_outlined),
-              selectedIcon: Icon(Icons.search),
-              label: 'Search',
             ),
             NavigationDestination(
               icon: Icon(Icons.collections_bookmark_outlined),

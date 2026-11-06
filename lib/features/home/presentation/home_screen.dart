@@ -6,7 +6,6 @@ import '../../file_manager/providers/file_manager_providers.dart';
 import '../../file_manager/domain/universal_file.dart';
 import '../../file_manager/presentation/file_open_handler.dart';
 import '../../library/providers/library_providers.dart';
-import '../../search/providers/search_providers.dart';
 import '../../../core/file_detection/file_type_detector.dart';
 
 class HomeScreen extends ConsumerWidget {
@@ -20,6 +19,11 @@ class HomeScreen extends ConsumerWidget {
       appBar: AppBar(
         title: const Text('Viewdex'),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.search),
+            tooltip: 'Search files',
+            onPressed: () => context.push('/search'),
+          ),
           IconButton(
             icon: const Icon(Icons.settings),
             onPressed: () => context.push('/settings'),
@@ -180,8 +184,10 @@ class HomeScreen extends ConsumerWidget {
           label: 'Images',
           color: Colors.purple,
           onTap: () {
-            ref.read(searchFilterProvider.notifier).state = FileType.image;
-            context.go('/search');
+            context.push('/category', extra: {
+              'fileType': FileType.image,
+              'label': 'Images',
+            });
           },
         ),
         _QuickAccessItem(
@@ -189,8 +195,10 @@ class HomeScreen extends ConsumerWidget {
           label: 'Videos',
           color: Colors.deepOrange,
           onTap: () {
-            ref.read(searchFilterProvider.notifier).state = FileType.video;
-            context.go('/search');
+            context.push('/category', extra: {
+              'fileType': FileType.video,
+              'label': 'Videos',
+            });
           },
         ),
         _QuickAccessItem(
@@ -198,8 +206,10 @@ class HomeScreen extends ConsumerWidget {
           label: 'Audio',
           color: Colors.pink,
           onTap: () {
-            ref.read(searchFilterProvider.notifier).state = FileType.audio;
-            context.go('/search');
+            context.push('/category', extra: {
+              'fileType': FileType.audio,
+              'label': 'Audio',
+            });
           },
         ),
         _QuickAccessItem(
@@ -207,8 +217,10 @@ class HomeScreen extends ConsumerWidget {
           label: 'Docs',
           color: Colors.blue,
           onTap: () {
-            ref.read(searchFilterProvider.notifier).state = FileType.document;
-            context.go('/search');
+            context.push('/category', extra: {
+              'fileType': FileType.document,
+              'label': 'Documents',
+            });
           },
         ),
         _QuickAccessItem(
@@ -216,8 +228,10 @@ class HomeScreen extends ConsumerWidget {
           label: 'PDFs',
           color: Colors.red,
           onTap: () {
-            ref.read(searchFilterProvider.notifier).state = FileType.pdf;
-            context.go('/search');
+            context.push('/category', extra: {
+              'fileType': FileType.pdf,
+              'label': 'PDFs',
+            });
           },
         ),
         _QuickAccessItem(
@@ -225,8 +239,10 @@ class HomeScreen extends ConsumerWidget {
           label: 'Archives',
           color: Colors.amber,
           onTap: () {
-            ref.read(searchFilterProvider.notifier).state = FileType.archive;
-            context.go('/search');
+            context.push('/category', extra: {
+              'fileType': FileType.archive,
+              'label': 'Archives',
+            });
           },
         ),
         _QuickAccessItem(
@@ -284,6 +300,8 @@ class HomeScreen extends ConsumerWidget {
         final file = File(path);
         final exists = file.existsSync();
         final type = detector.detectType(path);
+        // Extract the file extension for proper routing in FileOpenHandler
+        final ext = name.contains('.') ? name.split('.').last : null;
 
         return ListTile(
           leading: CircleAvatar(
@@ -299,7 +317,9 @@ class HomeScreen extends ConsumerWidget {
                   final uFile = UniversalFile(
                     name: name,
                     path: path,
+                    extension: ext,
                     size: stat.size,
+                    modifiedDate: stat.modified,
                     fileType: type,
                     isDirectory: false,
                   );
